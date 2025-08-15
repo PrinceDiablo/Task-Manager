@@ -205,3 +205,21 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# ============================
+# CS50 & Project-specific ignores
+# ============================
+
+# CS50 IDE project files
+*.cs50
+
+# Local data files for projects
+tasks.json
+tasks.db
+
+# VS Code settings
+.vscode/
+
+# Editor project settings
+.idea/
