@@ -18,7 +18,7 @@ class FileIO:
         """Export to file"""
         exporter = cls.exporters.get(format_name)
         if not exporter:
-            raise ValueError(f"Format '{format_name}' is not supported.")
+            raise ValueError(f"\nFormat '{format_name}' is not supported.")
         return exporter(data, path)
 
     @classmethod
@@ -26,5 +26,5 @@ class FileIO:
         """Import from file"""
         importer = cls.importers.get(format_name)
         if not importer:
-            raise ValueError(f"Format '{format_name}' is not supported.")
+            raise ValueError(f"\nFormat '{format_name}' is not supported.")
         return importer(path)
