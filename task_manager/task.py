@@ -19,11 +19,11 @@ class Task:
     def __init__(
             self, 
             title: str,  
-            period_end_date: date, 
+            period_end_date: date,
+            period_start_date: date = date.today(), 
             priority: int = 3, 
             status: str = "nc",
-            description: str = "", 
-            period_start_date: date = date.today()
+            description: str = "",   
         ):
         self.title = title
         self.description = description
@@ -31,6 +31,30 @@ class Task:
         self.period_end_date = period_end_date
         self.priority = priority
         self.status = status
+    
+    def __repr__(self) -> str:
+        """Return a developer-friendly string representation of the task."""
+        return (
+            f"Task(title='{self.title}', "
+            f"period_end_date={self.period_end_date},"
+            f"priority={self.priority}, "
+            f"status={self.status})"
+        )
+    
+    def __str__(self) -> str:
+        """Return a user-friendly string with task details."""
+        labels = {
+            "Status": type(self).STATUS_MAP.get(self.status),
+            "Priority": type(self).PRIORITY_MAP.get(self.priority),
+            "Description": self.description or "(No description)"
+        }
+        # Find the longest label for alignment
+        max_label_len = max(len(label) for label in labels.keys())
+
+        # Build the aligned string
+        details = "\n".join(f"{label.ljust(max_label_len)} : {value}" for label, value in labels.items())
+
+        return f"{self.title} ({self.period_start_date} - {self.period_end_date})\n{details}"
     
     def marked_complete(self) -> None:
         """Mark the task as completed."""
@@ -48,114 +72,97 @@ class Task:
         """Return True if the current date is after the task's end date."""
         return date.today() > self.period_end_date
 
-    def __repr__(self) -> str:
-        """Return a developer-friendly string representation of the task."""
-        return (
-            f"Task(title='{self.title}', "
-            f"period_end_date={self.period_end_date},"
-            f"priority={self.priority}, "
-            f"status={self.status})"
-        )
-    
-    def __str__(self) -> str:
-        """Return a user-friendly string with task details."""
-        labels = {
-            "Status": type(self).STATUS_MAP.get(self.status),
-            "Priority": type(self).PRIORITY_MAP.get(self.priority),
-            "Description": self.description or "(No description)"
-        }
 
-        # Find the longest label for alignment
-        max_label_len = max(len(label) for label in labels.keys())
-
-        # Build the aligned string
-        details = "\n".join(f"{label.ljust(max_label_len)} : {value}" for label, value in labels.items())
-
-        return f"{self.title} ({self.period_start_date} - {self.period_end_date})\n{details}"
-
-    def to_dict(self) -> list[dict]:
+    def to_dict(self) -> dict:
         """Convert Task to list of dictionarys for export"""
         return {
             "title": self.title,
-            "description": self.description,
             "period_start_date": self.period_start_date.isoformat(),
             "period_end_date": self.period_end_date.isoformat(),
             "priority": self.priority,
-            "status": self.status
+            "status": self.status,
+            "description": self.description,
         }
     
     @classmethod
-    def from_dict(cls, data: list[dict]) -> "Task":
+    def from_dict(cls, data: dict) -> "Task":
         """Rebuild Task from a list of dictionarys."""
         return cls(
             title = data["title"],
-            description = data.get("description", ""),
             period_start_date = date.fromisoformat(data["period_start_date"]),
             period_end_date = date.fromisoformat(data["period_end_date"]),
             priority = data["priority"],
-            status = data["status"]
+            status = data["status"],
+            description = data.get("description", ""),
         )
     
-    @property
-    def title(self):
-        return self._title
-    
-    @title.setter
-    def title(self, value: str):
+# ---- Validators ----
+
+    @staticmethod
+    def validate_title(value: str) -> str:
         if not value.strip():
-            raise ValueError("This field can't be empty.")
-        self._title = str(value)
+            raise ValueError("Title can't be empty.")
+        return value.strip()
     
-    def _date_check(self, value: str, attribute_name: str) -> date:
+    @staticmethod
+    def validate_date(value: str) -> date:
         """Checks valid date format: YYYY-MM-DD"""
         try:
-            date_obj = datetime.strptime(str(value), "%Y-%m-%d").date()
-            setattr(self, attribute_name, date_obj)
-        except ValueError:
+            return datetime.strptime(str(value), "%Y-%m-%d").date()
+        except ValueError: 
             raise ValueError("Please Enter a valid date in YYYY-MM-DD format.")
+    
+    @classmethod    
+    def validate_priority(cls, value: int) -> int:
+        value = int(value)
+        if value not in cls.PRIORITY_MAP:
+            raise ValueError("Priority must be numeric and, between 1 and 5.")
+        return value
+    
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        value = value.strip().lower()
+        for dict_key, dict_value in cls.STATUS_MAP.items(): 
+            if value == dict_key or value == dict_value:
+                return dict_key # normalize to sort form
+        raise ValueError ("Use Completed(c) or Not Completed(nc) or In-progress(inp).") 
+
+# ---- Property and setters ----
 
     @property
-    def period_start_date(self):
+    def title(self): 
+        return self._title
+    @title.setter
+    def title(self, value: str): 
+        self._title = self.validate_title(value)
+
+    @property
+    def period_start_date(self): 
         return self._period_start_date
-    
     @period_start_date.setter
     def period_start_date(self, value: str):
-        self._date_check(value, "_period_start_date")
+        self._period_start_date = self.validate_date(value)
     
     @property
     def period_end_date(self):
         return self._period_end_date
-    
     @period_end_date.setter
     def period_end_date(self, value: str):
-        self._date_check(value, "_period_end_date")
+        self._period_end_date = self.validate_date(value)
     
     @property
     def priority(self):
-        return self._priority
-    
+        return self._priority 
     @priority.setter
     def priority(self, value: int):
-        try:
-            value = int(value)
-            if value not in type(self).PRIORITY_MAP.keys():
-                raise ValueError ("Priority must be 1 for highest, 2 for High, 3 for Medium, 4 for Low, 5 for Lowerst.")
-            self._priority = value # Values stored in the class are : 1 to 5
-        except ValueError:
-            raise ValueError("Please enter a number.")
+        self._priority = self.validate_priority(value)
         
     @property
     def status(self):
         return self._status
-    
     @status.setter
     def status(self, value: str):
-        value = value.strip().lower()
-        for k, v in type(self).STATUS_MAP.items(): # k = dictionary key and v = dictionary value
-            if v == value or k == value:
-                self._status = k # Values stored in the class are: c, nc, inp 
-                return
-        raise ValueError ("Invalid Choice. Use Completed(c) or Not Completed(nc) or In-progress(inp).") 
+        self._status = self.validate_status(value)
 
         
 
