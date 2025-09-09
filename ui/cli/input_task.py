@@ -1,4 +1,11 @@
-#input_task.py
+"""
+
+CLI task input.
+
+Prompts for task fields with validation and re-prompt loops. 
+Builds a Task using the model's validators.
+"""
+
 from task_manager import Task
 from datetime import date
 
@@ -6,7 +13,7 @@ class InputTask:
     """Help validate and input task, one field at a time."""
 
     @staticmethod
-    def valid_input(prompt: str, validator, allow_blank=False, default=None):
+    def valid_input(prompt: str, validator, allow_blank=False, default=None) -> any:
         """Validated each user input"""
         while True:
             value = input(prompt).strip()
@@ -42,23 +49,33 @@ class InputTask:
             end_date = cls.valid_input(
                 "Period_end_date* (YYYY-MM-DD): ",
                 Task.validate_date
-            ) 
-            if end_date >= start_date:
+            )
+            try:
+                Task.validate_date_order(start_date, end_date)
                 break
-            print("Invalid Input: End date must be greater than or equal to start date.")          
+            except ValueError as e:
+                print(f"Invalid Input: {e}")
+
         # Priority Field     
         priority = cls.valid_input(
-            "Priority(1=highest, 2=High, 3=Medium, 4=Low, 5=Lowerst, Enter to skip): ",
+            "Priority (1-5, Enter to skip): ",
             Task.validate_priority,
             allow_blank=True,
             default=3
         )
         # Status Field
         status = cls.valid_input(
-            "Status (c for Completed, nc for Not Completed, inp for In-progress, Enter to skip): ",
+            "Status (c/ns/inp, Enter to skip): ",
             Task.validate_status,
             allow_blank=True,
-            default="nc"
+            default="ns"
         )
         
-        return Task(title,end_date,start_date,priority,status,description)
+        return Task(
+            title=title,
+            period_start_date=start_date,
+            period_end_date=end_date,
+            priority=priority,
+            status=status,
+            description=description
+        )

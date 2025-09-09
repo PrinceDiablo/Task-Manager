@@ -28,13 +28,13 @@ def main():
         path = input("Please enter the file path you wish to open: ")
         print("\n" +"*"*10)
         try:
-            data = FileIO.import_(Path.suffix(path) ,path)
+            data = FileIO.import_(Path(path).suffix, path)
         except (FileNotFoundError, ValueError):
             print("Error: No such file exists.")
         for item in data:
             print(manager.add_task(Task.from_dict(item)))
         print("File imported succesfully")
-        if input("Do you wish to see the content of the file(y/n): ").strip().lower() in ("yes", "no"):
+        if input("Do you wish to see the content of the file(y/n): ").strip().lower() in ("yes", "y"):
             for task in manager.view_tasks():
                 print(task)
         print("*"*10) 
@@ -54,19 +54,28 @@ def other_choices(choice: str, manager: TaskManager, path: str) -> str:
                 path = input("Please enter a file path where you want to save: ")
             try:
                 print(FileIO.export(Path(path).suffix, manager.to_dict_list(), path))
-                return path
             except (FileNotFoundError, ValueError):
                 print("\nError: No such path or file exists.")
+            return path
         
         # Save as Option:
         case "save_as" | "sa":
             new_path = input("Please enter a file path where you want to save: ")
             try:               
-                print(FileIO.export(Path(path).suffix, manager.to_dict_list(), new_path))
-                if not path:
-                    return new_path
+                print(FileIO.export(Path(new_path).suffix, manager.to_dict_list(), new_path))
+                return new_path
             except (FileNotFoundError, ValueError):
                 print("Error: No such path or file exists.")
+                return path
+        
+        # Save a Copy and keep editing the original Option:
+        case "save_copy" | "sc":
+            copy_path = input("Please enter a file path where you want to save a copy: ")
+            try:
+                print(FileIO.export(Path(copy_path).suffix, manager.to_dict_list(), copy_path))
+            except (FileNotFoundError, ValueError):
+                print("Error: No such path or file exists.")
+            return path  
 
         # Save and Exit Option:   
         case "save_exit" | "se":
@@ -74,11 +83,12 @@ def other_choices(choice: str, manager: TaskManager, path: str) -> str:
                 path = input("Please enter a file path where you want to save: ")
             try:               
                 print(FileIO.export(Path(path).suffix, manager.to_dict_list(), path))
-                return path
+                print("Thank You, see you soon")
+                sys.exit(0)
             except (FileNotFoundError, ValueError):
                 print("Error: No such path or file exists.")
-            print("Thank You, see you soon")
-            sys.exit(0)
+            return path
+            
         
         # Exit Option:
         case "exit" | "q":
@@ -87,68 +97,103 @@ def other_choices(choice: str, manager: TaskManager, path: str) -> str:
                 sys.exit(0)
             else:
                 print("Why typing useless options. Focus on your work.")
+            return path
 
     # ---- Modifying Task Options ----   
      
         # Add Task Option:
         case "add" | "a":
             print(manager.add_task(InputTask.input_task()))
-        
-        # Edit Task Option:
-        case "edit" | "e":
-            number = update_delete_helper("Which task number would you like to update? ")
-            print(manager.tasks[number-1])
-            print(manager.update_task(number, InputTask.input_task()))
-        
-        #Update Status Option:
-        case "update_status" | "u":
-            number = update_delete_helper("Which task number would you like to update? ")
-            #TODO proper status update logic
-        
-        #View Task Option: TODO improve ui design may be later with 'rich' or 'tabulate'
-        case "view" | "v":
-            for task in manager.view_tasks():
-                print(task)
+            return path
         
         #Delete Task Option:
         case "delete" | "del":
             number = update_delete_helper("Which task number do you want to delete? ")
+            if number is None:
+                return path
             if input(f"Are you sure you want to delete task no. {number} (y/n): ").strip().lower() in ("yes", "y"):
                 print(manager.delete_task(number))
+            return path
+        
+        # Edit Task Option:
+        case "edit" | "e":
+            number = update_delete_helper("Which task number would you like to update? ")
+            if number is None:
+                return path
+            print(manager.tasks[number-1])
+            print(manager.update_task(number, InputTask.input_task()))
+            return path
+        
+        #Update Status Option:
+        case "update_status" | "u":
+            number = update_delete_helper("Which task number would you like to update? ")
+            if number is None:
+                return path
+            while True:
+                value = input("what is the currnt status(c/ns/inp): ").strip().lower()
+                if value in Task.STATUS_MAP:
+                    break
+                print("Please enter a valid input.")
+            match value:
+                case "completed" | "c":
+                    manager.tasks[number-1].marked_complete()
+                    print(manager.update_task(number, manager.tasks[number-1]))
+                case "ns":
+                    manager.tasks[number-1].marked_not_started()
+                    print(manager.update_task(number, manager.tasks[number-1]))
+                case "inp":
+                    manager.tasks[number-1].mark_in_progress()
+                    print(manager.update_task(number, manager.tasks[number-1]))
+            return path
+        
+        #View Task Option:
+        case "view" | "v":
+            try:
+                for task in manager.view_tasks():
+                    print(task)
+            except ValueError as e:
+                print(e)
+            return path
         
     # ---- Report View options ---- TODO (not implemented yet)
 
         case "overdue" | "d":
-            # TODO
-            print("Report Section (Comming Soon)")
+            print("Comming Soon")
+            return path
         case "priority" | "p":
             # TODO
-            print("Report Section (Comming Soon)")
+            print("Comming Soon")
+            return path
         case "remaining" | "r":
             # TODO
-            print("Report Section (Comming Soon)")
+            print("Comming Soon")
+            return path
         
-def update_delete_helper(prompt) -> int:
+def update_delete_helper(prompt: str,mgr: TaskManager = manager, input_fn=input) -> int | None:
+    """Prompt until a valid task number is entered. Returns None if no tasks."""
+    if not mgr.tasks:
+        print(TaskManager.EMPTY_MESSAGE)
+        return None
     while True:
+        choice = input_fn(prompt)
         try:
-            choice = int(input(prompt))
-            if 1 <= choice <= len(manager.tasks):
-                return choice
-            print(f"Please enter a number between 1 and {len(manager.tasks)}.")
-        except ValueError:
-            print("Please enter a valid number.")
+            return mgr.validate_index(choice)
+        except ValueError as e:
+            if str(e) == TaskManager.EMPTY_MESSAGE: 
+                print(e)
+                return None
+            print(e) 
         
-# TODO need to move all inputs
 def input_other_choices() -> str:
     """Prompt the user for an action (add, update, delete, etc.) and return the normalized keyword."""
     choices = ["add", "a", "edit", "e", "update_status", "u", "delete", "del" , "view", "v", "overdue", "d", 
-               "priority", "p", "remaining", "r", "save", "s", "save_as", "sa","save_exit", "se","exit","q"]
+               "priority", "p", "remaining", "r", "save", "s", "save_as", "sa","save_copy", "sc", "save_exit", "se","exit","q"]
     print()
     print("*"*10)
     print("What do you want to do now? Options Are:")
     print("(Add) more task, (edit) task, (update) status of the task, (delete) task, (view) all tasks,")
     print("view (overdue) tasks, sort by (priority), sort by least time (remaining).")
-    print("(save) to csv or json, save to new location (save_as),save and exit(save_exit), (exit)")
+    print("(save) to csv or json, save to new location (save_as),save as a copy (save_copy), save and exit(save_exit), (exit)")
     print("*"*10)
 
     while True:
