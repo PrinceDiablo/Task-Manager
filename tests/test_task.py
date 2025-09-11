@@ -45,9 +45,8 @@ def test_mark_in_progress_sets_status_inp(complete_sample_task: Task):
 
 # ---- Overdue logic ----
 
-def test_is_overdue_when_end_date_in_past():
-    t = Task(title="Test", period_start_date = (TODAY - timedelta(days=2)), period_end_date=(TODAY - timedelta(days=1)))
-    assert t.is_overdue() is True
+def test_is_overdue_when_end_date_in_past(overdue_task: Task):
+    assert overdue_task.is_overdue() is True
 
 def test_is_not_overdue_when_end_date_is_today():
     t = Task(title="Test", period_end_date=TODAY) 

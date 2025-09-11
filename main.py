@@ -5,7 +5,7 @@ Entry point for the Task Manager CLI.
 Handles user interaction, menus, and delegates work to manager and FileIO.
 """
 
-from task_manager import TaskManager, Task
+from task_manager import TaskManager, Task, reports
 from task_manager.fileio import json_io, csv_io, FileIO
 from pathlib import Path
 from ui.cli.input_task import InputTask 
@@ -31,12 +31,14 @@ def main():
             data = FileIO.import_(Path(path).suffix, path)
         except (FileNotFoundError, ValueError):
             print("Error: No such file exists.")
-        for item in data:
-            print(manager.add_task(Task.from_dict(item)))
-        print("File imported succesfully")
-        if input("Do you wish to see the content of the file(y/n): ").strip().lower() in ("yes", "y"):
-            for task in manager.view_tasks():
-                print(task)
+            path = ""
+        else:
+            for item in data:
+                print(manager.add_task(Task.from_dict(item)))
+            print("File imported succesfully")
+            if input("Do you wish to see the content of the file(y/n): ").strip().lower() in ("yes", "y"):
+                for task in manager.view_tasks():
+                    print(task)
         print("*"*10) 
 
     while True:
@@ -130,7 +132,7 @@ def other_choices(choice: str, manager: TaskManager, path: str) -> str:
             if number is None:
                 return path
             while True:
-                value = input("what is the currnt status(c/ns/inp): ").strip().lower()
+                value = input("what is the current status(c/ns/inp): ").strip().lower()
                 if value in Task.STATUS_MAP:
                     break
                 print("Please enter a valid input.")
@@ -155,18 +157,28 @@ def other_choices(choice: str, manager: TaskManager, path: str) -> str:
                 print(e)
             return path
         
-    # ---- Report View options ---- TODO (not implemented yet)
+    # ---- Report View options ---- 
 
         case "overdue" | "d":
-            print("Comming Soon")
+            try:
+                df = reports.get_overdue_report(manager.to_dict_list())
+                print(df.to_string(index=False))
+            except ValueError as e:
+                print(e)
             return path
         case "priority" | "p":
-            # TODO
-            print("Comming Soon")
+            try:
+                df = reports.get_priority_report(manager.to_dict_list())
+                print(df.to_string(index=False))
+            except ValueError as e:
+                print(e)
             return path
         case "remaining" | "r":
-            # TODO
-            print("Comming Soon")
+            try:
+                df = reports.get_remaining_report(manager.to_dict_list())
+                print(df.to_string(index=False))
+            except ValueError as e:
+                print(e)
             return path
         
 def update_delete_helper(prompt: str,mgr: TaskManager = manager, input_fn=input) -> int | None:
@@ -186,8 +198,9 @@ def update_delete_helper(prompt: str,mgr: TaskManager = manager, input_fn=input)
         
 def input_other_choices() -> str:
     """Prompt the user for an action (add, update, delete, etc.) and return the normalized keyword."""
-    choices = ["add", "a", "edit", "e", "update_status", "u", "delete", "del" , "view", "v", "overdue", "d", 
-               "priority", "p", "remaining", "r", "save", "s", "save_as", "sa","save_copy", "sc", "save_exit", "se","exit","q"]
+    choices = ["add", "a", "edit", "e", "update_status", "u", "delete", "del" , "view", "v", 
+               "overdue", "d", "priority", "p", "remaining", "r", 
+               "save", "s", "save_as", "sa","save_copy", "sc", "save_exit", "se","exit","q"]
     print()
     print("*"*10)
     print("What do you want to do now? Options Are:")
@@ -201,8 +214,9 @@ def input_other_choices() -> str:
         if choice in choices:
             return choice
         print("Please enter a valid choice:\n " \
-            "add(a), edit(e), update_status(u), delete(del), view(v), overdue(d),\n" \
-            "priority(p), remaining(r), save(s), save_as(sa), save_exit(sq), exit(q): ")
+            "add(a), edit(e), update_status(u), delete(del), view(v),\n" \
+            "overdue(d), priority(p), remaining(r),\n" \
+            "save(s), save_as(sa), save_exit(se), exit(q): ")
 
 def input_create_open() -> str:
     """Prompt the user for creating or opening a file."""
