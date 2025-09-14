@@ -5,8 +5,7 @@ Test Task manager core.
 Unit tests for TaskManager: validation, behavior.
 """
 
-from task_manager import TaskManager
-from task_manager.task import Task
+from task_manager import TaskManager, Task
 import pytest
 from datetime import date, timedelta
 

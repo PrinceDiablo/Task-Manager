@@ -1,12 +1,13 @@
 """
-main.py
----------
-Entry point for the Task Manager CLI. 
-Handles user interaction, menus, and delegates work to manager and FileIO.
+
+Task Manager CLI entry point.
+
+Runs the menu loop, routes actions to TaskManager and FileIO, and manages the
+current working file path.
 """
 
 from task_manager import TaskManager, Task, reports
-from task_manager.fileio import json_io, csv_io, FileIO
+from task_manager.fileio import FileIO, csv_io, json_io
 from pathlib import Path
 from ui.cli.input_task import InputTask 
 import sys
@@ -35,7 +36,7 @@ def main():
         else:
             for item in data:
                 print(manager.add_task(Task.from_dict(item)))
-            print("File imported succesfully")
+            print("File imported successfully")
             if input("Do you wish to see the content of the file(y/n): ").strip().lower() in ("yes", "y"):
                 for task in manager.view_tasks():
                     print(task)
@@ -196,7 +197,7 @@ def update_delete_helper(prompt: str,mgr: TaskManager = manager, input_fn=input)
                 return None
             print(e) 
         
-def input_other_choices() -> str:
+def input_other_choices(input_fn=input) -> str:
     """Prompt the user for an action (add, update, delete, etc.) and return the normalized keyword."""
     choices = ["add", "a", "edit", "e", "update_status", "u", "delete", "del" , "view", "v", 
                "overdue", "d", "priority", "p", "remaining", "r", 
@@ -210,19 +211,19 @@ def input_other_choices() -> str:
     print("*"*10)
 
     while True:
-        choice = input("Enter your Choice: ").strip().lower()
+        choice = input_fn("Enter your Choice: ").strip().lower()
         if choice in choices:
             return choice
-        print("Please enter a valid choice:\n " \
+        print("Please enter a valid option:\n " \
             "add(a), edit(e), update_status(u), delete(del), view(v),\n" \
             "overdue(d), priority(p), remaining(r),\n" \
             "save(s), save_as(sa), save_exit(se), exit(q): ")
 
-def input_create_open() -> str:
+def input_create_open(input_fn=input) -> str:
     """Prompt the user for creating or opening a file."""
     choices = ["create", "c", "open", "o"]
     while True:
-        choice = input("Do you want to (Create) a List or (Open) an existing list? ").strip().lower()
+        choice = input_fn("Do you want to (Create) a List or (Open) an existing list? ").strip().lower()
         if choice in choices:
             return choice
         print()
